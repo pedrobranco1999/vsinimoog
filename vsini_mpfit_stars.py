@@ -13,6 +13,7 @@ import pandas as pd
 import sys
 sys.path.insert(0, os.path.dirname(repr(__file__).replace("'",""))+'mpfit/')
 from mpfit import mpfit
+from matplotlib import pyplot as plt
 
 RUN_PATH      = 'running_dir/'
 #MOOG_PATH    = ""  # if you have MOOGSILENT in your path use this.
@@ -231,7 +232,9 @@ def minimize_synth(p, star, vmac, fe_intervals, obs_lambda, obs_flux, ldc, CDELT
         return vrot_parameters
 
     # define parameters for minimization
-    vrot_info = {'parname': 'vrot', 'value': 15, 'fixed': 0, 'limited': [1, 1], 'limits': [1, 20], 'mpside': 2,
+#    vrot_info = {'parname': 'vrot', 'value': 15, 'fixed': 0, 'limited': [1, 1], 'limits': [1, 20], 'mpside': 2,
+#                    'step': 0.001}
+    vrot_info = {'parname': 'vrot', 'value': 5, 'fixed': 0, 'limited': [1, 1], 'limits': [1, 20], 'mpside': 2,
                     'step': 0.001}
     parinfo = [vrot_info]
 
@@ -246,67 +249,12 @@ def minimize_synth(p, star, vmac, fe_intervals, obs_lambda, obs_flux, ldc, CDELT
 
     return parameters
 
-def creating_final_synth_spectra(vsini, star, vmac, fe_intervals, obs_lambda, obs_flux, ldc, CDELT1, instr_broad, flux_err=1, **kwargs):
-    """
-    User supllied function that contains the model to be tested. Calculates the synthetic points at the same
-    wavelength of the observational points (this means inside the iron lines regions).
-    Returns an integer as status of the calculation and an array of deviates between the data points and the model
-    points, normalized by the error in the observation (here, an arbitrary value is given as HARPS did not provide
-    errors).
-    :param p: list, initial values of parameters
-    :param star: string, star name
-    :param vmac: float, macroturbulence of star
-    :param fe_lines_intervals: intervals where iron lines are present
-    :param obs_flux: list of observational flux points
-    :param flux_err: float, error in observational flux points (set to 0.01 here)
-    :param kwargs
-    :return: integer (status of operations), array of deviates
-    """
-
-    gap = obs_lambda[-1] - obs_lambda[0]
-    if gap <= 450:
-        lambda_i_values = [round(obs_lambda[0], 3)]
-        lambda_f_values = [round(obs_lambda[-1], 3)]
-    elif gap > 450 and gap <= 900:
-        lambda_i_values = [round(obs_lambda[0], 3), round(obs_lambda[int(len(obs_lambda)/2)], 3)]
-        lambda_f_values = [round(obs_lambda[int(len(obs_lambda)/2)-1], 3), round(obs_lambda[-1], 3)]
-    elif gap > 900:
-        lambda_i_values = [round(obs_lambda[0], 3), round(obs_lambda[int(len(obs_lambda)/3)], 3), round(obs_lambda[int(len(obs_lambda)/3*2)], 3)]
-        lambda_f_values = [round(obs_lambda[int(len(obs_lambda)/3)-1], 3), round(obs_lambda[int(len(obs_lambda)/3*2)-1], 3), round(obs_lambda[-1], 3)]
-
-    synth_data = []  # all flux values from model
-    synth_lambda = []  # all wavelength points from model
-
-    for lambda_i, lambda_f in zip(lambda_i_values, lambda_f_values):
-        moog_fe(star, vsini, round(vmac,3), lambda_i, lambda_f, ldc, round(CDELT1,3), instr_broad)
-        with open('synthesis_vsini_files/synth_fe.asc') as asc:
-            for x in asc:
-                if x[0] == ' ':
-                    entry = x.rstrip().split()
-                    synth_lambda.append(float(entry[0]))
-                    synth_data.append(float(entry[1]))
-
-    synth_data_fe = []
-    synth_lambda_fe = []
-
-    fe_intervals_list = [row for row in fe_intervals[['ll_li', 'll_lf','ll_si','ll_sf']].to_numpy()]
-
-    for i,(ll_li, ll_lf, ll_si, ll_sf) in enumerate(fe_intervals_list):
-        select_sll = np.where((synth_lambda >= ll_si) & (synth_lambda <= ll_sf))
-        synth_data_fe.append(synth_data[select_sll])
-        synth_lambda_fe.append(synth_lambda[select_sll])
-
-    obs_flux = np.array(obs_flux)
-    synth_data_fe = np.array(synth_data_fe)
-
-    err = np.zeros(len(obs_flux)) + flux_err
-    status = 0
-
+def creating_final_synth_spectra(vsini, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad):
+    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vsini)
     flux_ratio = (obs_flux / synth_data_fe)
-    flux_diff = (obs_flux - synth_data_fe)/err
-
-    synth_normalized_spectra = pd.DataFrame(data=np.column_stack((synth_lambda_fe,synth_data_fe, flux_diff, flux_ratio)),columns=['wl','flux', 'flux_diff', 'flux_ratio'])
-    synth_normalized_spectra.to_csv('./synth_observed_normalized_spectra/%s_synth_normalized_spectra.rdb' % star, index = False, sep = '\t')
+    flux_diff = (obs_flux - synth_data_fe)
+    synth_normalized_spectra = pd.DataFrame(data=np.column_stack((obs_lambda, synth_data_fe, flux_diff, flux_ratio)),columns=['wl','flux', 'flux_diff', 'flux_ratio'])
+    synth_normalized_spectra.to_csv('running_dir/%s_synth_normalized_spectra.rdb' % star, index = False, sep = '\t')
 
 
 def get_spectra(fitsfile):
@@ -439,6 +387,76 @@ def get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc
     print(vrot_fp, vrot_err_fp, vmac_fp, status_fp)
     return vrot, vrot_err, vmac, status, vsini_final_err
 
+
+def create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test):
+    # read observational spectra
+    obs_lambda_full_spectrum, obs_data_full_spectrum, delta_lambda =  get_spectra(spectrum)
+    interp_function = interp1d(obs_lambda_full_spectrum, obs_data_full_spectrum)
+    obs_lambda_interp = np.arange(np.min(fe_intervals['ll_li']),np.max(fe_intervals['ll_lf'])+round(float(delta_lambda), 3), round(float(delta_lambda), 3))
+    obs_lambda_interp = np.round(obs_lambda_interp,3)
+    obs_data_interp = interp_function(obs_lambda_interp)
+    obs_lambda_flat, obs_data_norm_flat = get_intervals_normalized_spectra(obs_lambda_interp, obs_data_interp, fe_intervals, snr)
+    obs_normalized_spectra = pd.DataFrame(data=np.column_stack((obs_lambda_flat,obs_data_norm_flat)),columns=['wl','flux'])
+
+
+    create_atm_model(teff, logg, feh, vtur, star)
+    vmac = round(float(get_vmac(teff, logg)), 3)
+    print(teff, logg, feh, vtur, vmac)
+
+    obs_lambda = np.array(obs_normalized_spectra['wl'])
+    CDELT1 = delta_lambda
+    p = [vrot_test]
+
+    
+    gap = obs_lambda[-1] - obs_lambda[0]
+    if gap <= 450:
+        lambda_i_values = [round(obs_lambda[0], 3)]
+        lambda_f_values = [round(obs_lambda[-1], 3)]
+    elif gap > 450 and gap <= 900:
+        lambda_i_values = [round(obs_lambda[0], 3), round(obs_lambda[int(len(obs_lambda)/2)], 3)]
+        lambda_f_values = [round(obs_lambda[int(len(obs_lambda)/2)-1], 3), round(obs_lambda[-1], 3)]
+    elif gap > 900:
+        lambda_i_values = [round(obs_lambda[0], 3), round(obs_lambda[int(len(obs_lambda)/3)], 3), round(obs_lambda[int(len(obs_lambda)/3*2)], 3)]
+        lambda_f_values = [round(obs_lambda[int(len(obs_lambda)/3)-1], 3), round(obs_lambda[int(len(obs_lambda)/3*2)-1], 3), round(obs_lambda[-1], 3)]
+
+    synth_data = []  # all flux values from model
+    synth_lambda = []  # all wavelength points from model
+
+    for lambda_i, lambda_f in zip(lambda_i_values, lambda_f_values):
+        moog_fe(star, p, vmac, lambda_i, lambda_f, ldc, CDELT1, instr_broad)
+        with open(RUN_PATH+'synth_fe.asc') as asc:
+            for x in asc:
+                if x[0] == ' ':
+                    entry = x.rstrip().split()
+                    synth_lambda.append(float(entry[0]))
+                    synth_data.append(float(entry[1]))
+
+    synth_data_fe = []
+    synth_lambda_fe = []
+
+    fe_intervals_list = [row for row in fe_intervals[['ll_li', 'll_lf','ll_si','ll_sf']].to_numpy()]
+
+    for i,(ll_li, ll_lf, ll_si, ll_sf) in enumerate(fe_intervals_list):
+        select_sll = np.where((synth_lambda >= ll_si) & (synth_lambda <= ll_sf))[0]
+        synth_data_fe.extend(list(np.array(synth_data)[select_sll]))
+        synth_lambda_fe.extend(list(np.array(synth_lambda)[select_sll]))
+
+    obs_flux = np.array(obs_normalized_spectra['flux'])
+    synth_data_fe = np.array(synth_data_fe)
+
+    return obs_lambda, obs_flux, synth_data_fe
+
+
+def manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test):
+    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test)
+    plt.plot(obs_lambda, obs_flux)
+    plt.plot(obs_lambda, synth_data_fe)
+    plt.show()
+
+
+
+
+
 ### Main program:
 def main():
 
@@ -479,13 +497,33 @@ def main():
     instr_broad = 0.055
     spectrum = "/home/sousasag/Data/NCORES/TOI-908/combined_spec/TOI-908_HARPSS_2021_rv.fits"
 
+
+    star = "TOI-969_HARPS"
+    teff = 4435
+    eteff = 80
+    logg = 4.16
+    feh  = 0.175
+    efeh = 0.044
+    vtur = 0.4
+    snr  = 220
+    ldc  = 0.787   #https://exoctk.stsci.edu/limb_darkening
+    instr_broad = 0.055
+    spectrum = "/home/sousasag/Investigador/spectra/TOI-969/TOI969_HARPS_2021_rv.fits"
+
+    #manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)
+    #return
+
     print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, spectrum)
-    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status)
 
+#    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+#    creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
+#    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status)
 
-#    vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-#    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status, vsini_final_err)
+#With Error propagation
+    vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+    creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
+    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status, vsini_final_err)
+
 
 if __name__ == "__main__":
     main()
