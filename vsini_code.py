@@ -479,84 +479,69 @@ def interpolation_function(T,log,feh):
 
 
 ### Main program:
-def main(name_star,file_name,spectrum):
+def main():
    
-    b=str(name_star)
-    stars=pd.read_csv(file_name)
-    index=stars[stars["star_name"]==b]["fits_name"].index.values
-    directory=stars[stars["star_name"]==b]["fits_name"][index[0]]
+    directory="stars_information.csv"
+    Table=pd.read_csv(directory)
+
+    star_names=list(Table["star_name"])
+    fits_directory=list(Table["fits_name"])
+
+    N=len(star_names)  #number of data to analyse
+
+
     print("Running Dir:", RUN_PATH)
 
     start_time = time.time()
     fe_intervals = pd.read_csv(LINELIST_PATH+'vsini_intervals.list', sep='\t')
     
-    star = name_star + "_HARPS"
-    spect=list(stars[stars["star_name"]==name_star]["spectrograph"])[0]
-    teff = float(stars[stars["star_name"]==name_star]["Teff"])
-    eteff = float(stars[stars["star_name"]==name_star]["eTeff"])
-    logg = float(stars[stars["star_name"]==name_star]["logg"])
-    feh  = float(stars[stars["star_name"]==name_star]["feh"])
-    efeh = float(stars[stars["star_name"]==name_star]["efeh"])
-    vtur = float(stars[stars["star_name"]==name_star]["vtur"])
-    snr  = float(stars[stars["star_name"]==name_star]["snr"])
-    ldc  = float(interpolation_function(teff,logg,feh))   #https://exoctk.stsci.edu/limb_darkening
-    instr_broad = float(stars[stars["star_name"]==name_star]["instr_broad"])
+    for i in range(N):
+        star = star_names[i]
+        spect=list(Table[Table["star_name"]==star]["spectrograph"])[0]
+        teff = float(Table[Table["star_name"]==star]["Teff"])
+        eteff = float(Table[Table["star_name"]==star]["eTeff"])
+        logg = float(Table[Table["star_name"]==star]["logg"])
+        feh  = float(Table[Table["star_name"]==star]["feh"])
+        efeh = float(Table[Table["star_name"]==star]["efeh"])
+        vtur = float(Table[Table["star_name"]==star]["vtur"])
+        snr  = float(Table[Table["star_name"]==star]["snr"])
+        ldc  = float(interpolation_function(teff,logg,feh))   #https://exoctk.stsci.edu/limb_darkening
+        instr_broad = float(Table[Table["star_name"]==star]["instr_broad"])
     #spectrum = "/home/pedro/OneDrive/Documentos/codes/Espetros/" + directory
-    print(ldc)
-    print(spect,spectrum,star,teff,eteff,logg,feh,efeh,vtur,snr,ldc,instr_broad)    #manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, spectrum)    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status, vsini_final_err)
+    
+        print(spect,fits_directory[i],star,teff,eteff,logg,feh,efeh,vtur,snr,ldc,instr_broad)    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
-    #manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)
+    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)
     #return
 
-    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, spectrum)
+        print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])
 
-#    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-#    creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
-#    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status)
+#    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
+#    print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status)
 
 #With Error propagation
-    vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    creating_final_synth_spectra(vrot, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
-    print ('results', star, teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status, vsini_final_err)
+        vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+        creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
+        print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
     #saving the results in a csv file
-    List=[star,spect ,instr_broad,teff, logg, feh, snr, spectrum, vrot, vrot_err, vmac, status, vsini_final_err]
+        List=[star,spect ,instr_broad,teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err]
     
-    with open('results_simulations.csv', 'a') as f_object:
+        with open('results_simulations.csv', 'a') as f_object:
  
-    # Pass this file object to csv.writer()
-    # and get a writer object
+        # Pass this file object to csv.writer()
+        # and get a writer object
     
-        writer_object = writer(f_object)
+            writer_object = writer(f_object)
  
-    # Pass the list as an argument into
-    # the writerow()
-        writer_object.writerow(List)
+        # Pass the list as an argument into
+        # the writerow()
+            writer_object.writerow(List)
  
-    # Close the file object
-        f_object.close()
+        # Close the file object
+            f_object.close()
     
 
-dd="/home/pedro/OneDrive/Documentos/codes/Espetros/stars_information_others_spec.csv"
-AA=pd.read_csv(dd)
-
-name_s=list(AA["star_name"])
-fits_inf=list(AA["fits_name"])
-
-print(fits_inf[0])
-
-
-if True:
-    for i in range(0,1):
-        try:
-            if __name__ == "__main__":
-                main(name_s[i],dd,fits_inf[i])
-        except:
-            pass
-#for i in range(37,-1):
-#        try:
-#            if __name__ == "__main__":
-#                main(name_s[i],dd,fits_inf[i])
-#        except:
-#            pass
-
+if __name__ == "__main__":
+    main()
