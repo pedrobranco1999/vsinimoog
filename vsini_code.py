@@ -22,6 +22,7 @@ RUN_PATH      = 'running_dir/'
 MOOG_PATH     = "/home/pedro/OneDrive/Documentos/codes/MOOG2019/./"  # otherwise write your full path to MOOGSILENT here
 MODELS_PATH   = "/home/pedro/OneDrive/Documentos/codes/interpol_models/./"
 LINELIST_PATH = 'linelist/'
+SPECTRA_PATH = 'Spectra/'
 
 def norm(obs_array_complete, snr):
     """
