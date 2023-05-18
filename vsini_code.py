@@ -457,7 +457,7 @@ def manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe
 
 #### Aqui vou definir a função interpoladora
 
-Tabela1=pd.read_csv("values_limbo.csv")
+Tabela1=pd.read_csv("limb_values.csv")
 Temperature=np.arange(3500,7000,100)
 Logg=np.arange(3.0,5.0,0.1)
 FeH=np.arange(-0.5,0.6,0.1)
@@ -486,7 +486,7 @@ def main():
     Table=pd.read_csv(directory)
 
     star_names=list(Table["star_name"])
-    fits_directory=list(Table["fits_name"])
+    fits_directory=np.array(list(Table["fits_name"]))
 
     N=len(star_names)  #number of data to analyse
 
@@ -510,7 +510,7 @@ def main():
         instr_broad = float(Table[Table["star_name"]==star]["instr_broad"])
     #spectrum = "/home/pedro/OneDrive/Documentos/codes/Espetros/" + directory
     
-        print(spect,fits_directory[i],star,teff,eteff,logg,feh,efeh,vtur,snr,ldc,instr_broad)    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
+        print(spect,SPECTRA_PATH+fits_directory[i],star,teff,eteff,logg,feh,efeh,vtur,snr,ldc,instr_broad)    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
     #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)
     #return
@@ -522,12 +522,12 @@ def main():
 #    print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status)
 
 #With Error propagation
-        vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-        creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
-        print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
+        vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star,SPECTRA_PATH+ fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+        creating_final_synth_spectra(vrot, star, SPECTRA_PATH+fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
+        print ('results', star, teff, logg, feh, snr, SPECTRA_PATH+fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
     #saving the results in a csv file
-        List=[star,spect ,instr_broad,teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err]
+        List=[star,spect ,instr_broad,teff, logg, feh, snr,SPECTRA_PATH +fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err]
     
         with open('results_simulations.csv', 'a') as f_object:
  
