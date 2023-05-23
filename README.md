@@ -28,3 +28,5 @@ The output is saved in another csv file named "results_simulations.csv". The col
 - status: ask latter
 - vsini_final_err: uncertain of the vsini simulated by the code.
 
+## Aditional codes:
+In this repository there is a folder named "RV_for_correction" that you can correct your fit files spectrum in respect of the radial veloity.
