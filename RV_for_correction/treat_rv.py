@@ -3,7 +3,16 @@ import pandas as pd
 from astropy.io import fits
 import os
 
+
 def treat_rv(name_file,rv,folder):
+    
+    """
+    This function does the correction of the spectrum in radial velocity.
+    Parameters:
+    -name_file: The name of the file to correct the spectrum.
+    -rv: Value of the radial velocity of the specrtum    
+    """
+ 
     c=299792.458 ### light velocity
     
     File_op=fits.open(name_file)
