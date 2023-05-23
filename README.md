@@ -22,9 +22,9 @@ The output is saved in another csv file named "results_simulations.csv". The col
 - teff: the effective temperature of the star.
 - logg: the logarithmic of the gravity acceleration on the surface of the star
 - feh: the metallicity of the star.
-- vrot:
-- vrot_err:
-- vmac:
-- status:
-- vsini_final_err:
+- vrot: vsin simulated by the code.
+- vrot_err: ask latter
+- vmac: macroturbulence velocity
+- status: ask latter
+- vsini_final_err: uncertain of the vsini simulated by the code.
 
