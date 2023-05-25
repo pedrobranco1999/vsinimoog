@@ -3,7 +3,7 @@ import pandas as pd
 from astropy.io import fits
 import os
 
-PATH_TO_SAVE='/Spectra/'
+PATH_TO_SAVE='/home/pedro/OneDrive/Documentos/codes/Pedro_peec/vsinimoog/Spectra/'
 
 """
 You can run this program for a single file and can be adapted to run for a list of spectrums.
@@ -47,3 +47,5 @@ def treat_rv(name_file,rv):
     New_name=nome0 + "_rv.fits"
 
     fits.writeto(PATH_TO_SAVE + New_name,Flux_int,Header,overwrite=True)
+
+treat_rv("CoRoT-1_UVES_107200_472_683_2020.fits",1)
