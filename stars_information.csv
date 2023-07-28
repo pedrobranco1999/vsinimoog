@@ -1,1 +1,2 @@
 star_name,spectrograph,Teff,eTeff,logg,feh,efeh,vtur,instr_broad,fits_name
+KPS-1,SOPHIE_HE,4963,222,4.17,0.22,0.14,0.24,0.135,KPS-1_SOPHIE_HE_2020.fits
