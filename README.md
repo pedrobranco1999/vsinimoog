@@ -8,7 +8,7 @@ You need to insert the parameters in the "stars_information.csv" file and run th
 - Teff: the effective temperature of the star.
 - eTeff: the error of the effective temperature of the star.
 - logg: the logarithmic of the gravity acceleration on the surface of the star
-- -feh: the metallicity of the star.
+- feh: the metallicity of the star.
 - efeh: the error of the metallicity of the star.
 - vtur: the turbulence velocity.
 - instr_broad: the instrumental broadening.
@@ -23,10 +23,10 @@ The output is saved in another csv file named "results_simulations.csv". The col
 - logg: the logarithmic of the gravity acceleration on the surface of the star
 - feh: the metallicity of the star.
 - vrot: vsin simulated by the code.
-- vrot_err: ask latter
+- vrot_err: valie
 - vmac: macroturbulence velocity
-- status: ask latter
-- vsini_final_err: uncertain of the vsini simulated by the code.
+- status
+- vsini_final_err: final uncertain of the vsini simulated by the code.
 
 ## Aditional codes:
-In this repository there is a folder named "RV_for_correction" that you can correct your fit files spectrum in respect of the radial veloity.
+In this repository there is a folder named "RV_for_correction" that you can correct your fit files spectrum in respect of the radial velocity.
