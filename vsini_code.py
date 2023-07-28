@@ -24,11 +24,10 @@ MODELS_PATH   = "/home/pedro/OneDrive/Documentos/codes/interpol_models/./"
 LINELIST_PATH = 'linelist/'
 SPECTRA_PATH = 'Spectra/'
 
-def norm(obs_array_complete, snr):
+def norm(obs_array_complete):
     """
     Function to normalise a given interval of data points (average flux of continuum).
     :param obs_array_complete: list of floats of data points (e.g. flux)
-    :param snr: float, signal to noise ratio of given star
     :return: m, float, mean value of data points
     """
     obs_array_complete = list(obs_array_complete)
@@ -37,7 +36,6 @@ def norm(obs_array_complete, snr):
     sigma = np.std(obs_array_complete)
 
     # define maximum iterations as desired
-    #max_it = 20 if snr <= 200.0 else 10
     max_it=15
     it = 0
     while it < max_it:
@@ -236,7 +234,7 @@ def minimize_synth(p, star, vmac, fe_intervals, obs_lambda, obs_flux, ldc, CDELT
     # define parameters for minimization
 #    vrot_info = {'parname': 'vrot', 'value': 15, 'fixed': 0, 'limited': [1, 1], 'limits': [1, 20], 'mpside': 2,
 #                    'step': 0.001}
-    vrot_info = {'parname': 'vrot', 'value': 5, 'fixed': 0, 'limited': [1, 1], 'limits': [1, 60], 'mpside': 2,
+    vrot_info = {'parname': 'vrot', 'value': 5, 'fixed': 0, 'limited': [1, 1], 'limits': [0.1, 60], 'mpside': 2,
                     'step': 0.001}
     parinfo = [vrot_info]
 
@@ -251,8 +249,8 @@ def minimize_synth(p, star, vmac, fe_intervals, obs_lambda, obs_flux, ldc, CDELT
 
     return parameters
 
-def creating_final_synth_spectra(vsini, star, spectrum, teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad):
-    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vsini)
+def creating_final_synth_spectra(vsini, star, spectrum, teff, feh, vtur, logg, fe_intervals, ldc, instr_broad):
+    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals, vsini)
     flux_ratio = (obs_flux / synth_data_fe)
     flux_diff = (obs_flux - synth_data_fe)
     synth_normalized_spectra = pd.DataFrame(data=np.column_stack((obs_lambda, synth_data_fe, flux_diff, flux_ratio)),columns=['wl','flux', 'flux_diff', 'flux_ratio'])
@@ -267,7 +265,7 @@ def get_spectra(fitsfile):
     ll = np.arange(0,npoints)*cdelta1+crval1
     return ll, img_data, cdelta1
 
-def get_intervals_normalized_spectra(ll, flux, fe_intervals, snr):
+def get_intervals_normalized_spectra(ll, flux, fe_intervals):
     obs_data_norm = []
     obs_lambda = []
     fe_intervals_list = [row for row in fe_intervals[['ll_li', 'll_lf','ll_si','ll_sf']].to_numpy()]
@@ -277,7 +275,7 @@ def get_intervals_normalized_spectra(ll, flux, fe_intervals, snr):
         obs_data_one_large_interval = flux[select_ll]
 
         # m : mean value of larger interval to divide the smaller interval by
-        m = norm(obs_data_one_large_interval, snr)
+        m = norm(obs_data_one_large_interval)
 
         # get data from smaller intervals and normalising it
         select_sll = np.where((ll >= ll_si) & (ll <= ll_sf))[0]
@@ -328,7 +326,7 @@ def get_vmac(teff, log_g):
     return vmac_funct
 
 
-def get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals):
+def get_vsini(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals):
     create_atm_model(teff, logg, feh, vtur, star)
     vmac = round(float(get_vmac(teff, logg)), 3)
 
@@ -347,7 +345,7 @@ def get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_i
 
     # get wavelength points and flux data for Fe lines in interpolated rounded wavelenghts
 
-    obs_lambda_flat, obs_data_norm_flat = get_intervals_normalized_spectra(obs_lambda_interp, obs_data_interp, fe_intervals, snr)
+    obs_lambda_flat, obs_data_norm_flat = get_intervals_normalized_spectra(obs_lambda_interp, obs_data_interp, fe_intervals)
 
     obs_normalized_spectra = pd.DataFrame(data=np.column_stack((obs_lambda_flat,obs_data_norm_flat)),columns=['wl','flux'])
     obs_normalized_spectra.to_csv(RUN_PATH+'/%s_obs_normalized_spectra.rdb' % star, index = False, sep = '\t')
@@ -363,21 +361,21 @@ def get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_i
 
     #creating_final_synth_spectra(vsini = final_vrot, star = star, vmac = vmac, fe_intervals=fe_intervals, obs_lambda=obs_lambda_flat, obs_flux=obs_data_norm_flat, ldc = ldc, CDELT1 = delta_lambda, instr_broad = instr_broad, flux_err=1)
 
-    print ('results', star, teff, logg, feh, snr, spectrum, final_vrot)
+    print ('results', star, teff, logg, feh, spectrum, final_vrot)
 
     #stars_par.write('{:10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} \n'.format(star, teff, log_g, feh,
     #                                                                                    final_vrot[0], final_vrot[1],
-    #                                                                                    round(vmac_funct,3), round(ldc,3), instr_broad, snr))
+    #                                                                                    round(vmac_funct,3), round(ldc,3), instr_broad))
 
     return vrot, vrot_err, vmac, status
 
-def get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals):
+def get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, ldc, instr_broad, fe_intervals):
     #parameters = ['teff', 'feh']
-    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    vrot_tm, vrot_err_tm, vmac_tm, status_tm = get_vsini(star, spectrum, teff-eteff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    vrot_tp, vrot_err_tp, vmac_tp, status_tp = get_vsini(star, spectrum, teff+eteff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    vrot_fm, vrot_err_fm, vmac_fm, status_fm = get_vsini(star, spectrum, teff, feh-efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-    vrot_fp, vrot_err_fp, vmac_fp, status_fp = get_vsini(star, spectrum, teff, feh+efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
+    vrot, vrot_err, vmac, status = get_vsini(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals)
+    vrot_tm, vrot_err_tm, vmac_tm, status_tm = get_vsini(star, spectrum, teff-eteff, feh, vtur, logg, ldc, instr_broad, fe_intervals)
+    vrot_tp, vrot_err_tp, vmac_tp, status_tp = get_vsini(star, spectrum, teff+eteff, feh, vtur, logg, ldc, instr_broad, fe_intervals)
+    vrot_fm, vrot_err_fm, vmac_fm, status_fm = get_vsini(star, spectrum, teff, feh-efeh, vtur, logg, ldc, instr_broad, fe_intervals)
+    vrot_fp, vrot_err_fp, vmac_fp, status_fp = get_vsini(star, spectrum, teff, feh+efeh, vtur, logg, ldc, instr_broad, fe_intervals)
 
     vsini_final_err = np.sqrt( np.abs( (vrot_tm - vrot) - (vrot_tp - vrot) )**2. + np.abs( (vrot_fm - vrot) - (vrot_fp - vrot) )**2. + vrot_err**2. )
 
@@ -390,14 +388,14 @@ def get_vsini_error(star, spectrum, teff, eteff, feh, efeh, vtur, logg, snr, ldc
     return vrot, vrot_err, vmac, status, vsini_final_err
 
 
-def create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test):
+def create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals, vrot_test):
     # read observational spectra
     obs_lambda_full_spectrum, obs_data_full_spectrum, delta_lambda =  get_spectra(spectrum)
     interp_function = interp1d(obs_lambda_full_spectrum, obs_data_full_spectrum)
     obs_lambda_interp = np.arange(np.min(fe_intervals['ll_li']),np.max(fe_intervals['ll_lf'])+round(float(delta_lambda), 3), round(float(delta_lambda), 3))
     obs_lambda_interp = np.round(obs_lambda_interp,3)
     obs_data_interp = interp_function(obs_lambda_interp)
-    obs_lambda_flat, obs_data_norm_flat = get_intervals_normalized_spectra(obs_lambda_interp, obs_data_interp, fe_intervals, snr)
+    obs_lambda_flat, obs_data_norm_flat = get_intervals_normalized_spectra(obs_lambda_interp, obs_data_interp, fe_intervals)
     obs_normalized_spectra = pd.DataFrame(data=np.column_stack((obs_lambda_flat,obs_data_norm_flat)),columns=['wl','flux'])
 
 
@@ -449,15 +447,15 @@ def create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr
     return obs_lambda, obs_flux, synth_data_fe
 
 
-def manual_test(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test):
-    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals, vrot_test)
+def manual_test(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals, vrot_test):
+    obs_lambda, obs_flux, synth_data_fe = create_obs_synth_spec(star, spectrum, teff, feh, vtur, logg, ldc, instr_broad, fe_intervals, vrot_test)
     plt.plot(obs_lambda, obs_flux)
     plt.plot(obs_lambda, synth_data_fe)
     plt.show()
 
-#### Aqui vou definir a função interpoladora
+#### In these few lines bellow the goal is to determine the coefficient of limb darkening of the star
 
-Tabela1=pd.read_csv("limb_values.csv")
+Tabela1=pd.read_csv("limb_values.csv") ### These values were calculated with Exoctk
 Temperature=np.arange(3500,7000,100)
 Logg=np.arange(3.0,5.0,0.1)
 FeH=np.arange(-0.5,0.6,0.1)
@@ -474,6 +472,19 @@ for i in range(len(Temperature)):
             zz+=1
 
 def interpolation_function(T,log,feh):
+
+    """
+    This function determines the limb darkening coefficient for some parameters of the star
+    The range of the values accepted are:
+    T:[3500,7000]
+    log:[3.0,5.0]
+    FeH:[-0.5,0.5]
+    Parameters:
+    T: Temperature of the star
+    log: logg on the surface of the star
+    feh: matallicity of the star
+    """
+
     return interpn(Variables, VL,np.array([T,log,feh]))[0]
 
 
@@ -505,29 +516,28 @@ def main():
         feh  = float(Table[Table["star_name"]==star]["feh"])
         efeh = float(Table[Table["star_name"]==star]["efeh"])
         vtur = float(Table[Table["star_name"]==star]["vtur"])
-        snr  = float(Table[Table["star_name"]==star]["snr"])
         ldc  = float(interpolation_function(teff,logg,feh))   #https://exoctk.stsci.edu/limb_darkening
         instr_broad = float(Table[Table["star_name"]==star]["instr_broad"])
     #spectrum = "/home/pedro/OneDrive/Documentos/codes/Espetros/" + directory
     
-        print(spect,SPECTRA_PATH+fits_directory[i],star,teff,eteff,logg,feh,efeh,vtur,snr,ldc,instr_broad)    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
+        print(spect,SPECTRA_PATH+fits_directory[i],star,teff,eteff,logg,feh,efeh,vtur,ldc,instr_broad)    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, ldc, instr_broad, fe_intervals,2.87)    #return#    print (star, teff, logg, feh, vtur, ldc, instr_broad, fits_directory[i])    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, ldc, instr_broad, fe_intervals)#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, fe_intervals, ldc, instr_broad)#With Error propagation    #vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star, fits_directory[i], teff, eteff, feh, efeh, vtur, logg, ldc, instr_broad, fe_intervals)    #creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, fe_intervals, ldc, instr_broad)    #print ('results', star, teff, logg, feh, fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
-    #manual_test(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals,2.87)
+        #manual_test(star, SPECTRA_PATH+fits_directory[i], teff, feh, vtur, logg, ldc, instr_broad, fe_intervals,7.0)
     #return
 
-        print (star, teff, logg, feh, vtur, snr, ldc, instr_broad, fits_directory[i])
+        print (star, teff, logg, feh, vtur, ldc, instr_broad, fits_directory[i])
 
-#    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
-#    print ('results', star, teff, logg, feh, snr, fits_directory[i], vrot, vrot_err, vmac, status)
+#    vrot, vrot_err, vmac, status = get_vsini(star, fits_directory[i], teff, feh, vtur, logg, ldc, instr_broad, fe_intervals)
+#    creating_final_synth_spectra(vrot, star, fits_directory[i], teff, feh, vtur, logg, fe_intervals, ldc, instr_broad)
+#    print ('results', star, teff, logg, feh, fits_directory[i], vrot, vrot_err, vmac, status)
 
 #With Error propagation
-        vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star,SPECTRA_PATH+ fits_directory[i], teff, eteff, feh, efeh, vtur, logg, snr, ldc, instr_broad, fe_intervals)
-        creating_final_synth_spectra(vrot, star, SPECTRA_PATH+fits_directory[i], teff, feh, vtur, logg, snr, fe_intervals, ldc, instr_broad)
-        print ('results', star, teff, logg, feh, snr, SPECTRA_PATH+fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
+        vrot, vrot_err, vmac, status, vsini_final_err = get_vsini_error(star,SPECTRA_PATH+ fits_directory[i], teff, eteff, feh, efeh, vtur, logg, ldc, instr_broad, fe_intervals)
+        creating_final_synth_spectra(vrot, star, SPECTRA_PATH+fits_directory[i], teff, feh, vtur, logg, fe_intervals, ldc, instr_broad)
+        print ('results', star, teff, logg, feh, SPECTRA_PATH+fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err)
 
     #saving the results in a csv file
-        List=[star,spect ,instr_broad,teff, logg, feh, snr,SPECTRA_PATH +fits_directory[i], vrot, vrot_err, vmac, status, vsini_final_err]
+        List=[star,instr_broad,teff,logg,feh,vrot, vrot_err, vmac, status, vsini_final_err]
     
         with open('results_simulations.csv', 'a') as f_object:
  
